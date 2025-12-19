@@ -8,6 +8,7 @@
       <label>
         Горечь:
         <select v-model="facts.bitterness">
+          <option value="notSet">Выбрать</option>
           <option value="low">Низкая</option>
           <option value="medium">Средняя</option>
           <option value="high">Высокая</option>
@@ -17,6 +18,7 @@
       <label>
         Крепость:
         <select v-model="facts.strength">
+          <option value="notSet">Выбрать</option>
           <option value="low">Низкая</option>
           <option value="medium">Средняя</option>
           <option value="high">Высокая</option>
@@ -26,6 +28,7 @@
       <label>
         Кофеин:
         <select v-model="facts.caffeine">
+          <option value="notSet">Выбрать</option>
           <option value="low">Низкий</option>
           <option value="medium">Средний</option>
           <option value="high">Высокий</option>
@@ -46,7 +49,11 @@
       <h2>Подходящие чаи не найдены.</h2>
       <p>Однако вот список близкий к запросу</p>
       <ul>
-        <li v-for="tea in similar" :key="tea.name">{{ tea.name }}</li>
+        <li v-for="tea in similar" :key="tea.name">{{ tea.name }} : <br>
+          Гор: {{tea.bitterness}},<br>
+          Креп: {{tea.strength}},<br>
+          Коф: {{tea.caffeine}} <hr>
+        </li>
       </ul>
     </div>
   </div>
@@ -57,9 +64,9 @@ export default {
   data() {
     return {
       facts: {
-        bitterness: "low",
-        strength: "low",
-        caffeine: "low"
+        bitterness: "notSet",
+        strength: "notSet",
+        caffeine: "notSet"
       },
       searched: false,
       results: [],
@@ -101,9 +108,9 @@ export default {
       this.similar = [];
       /** магия JS, позволит нам это сделать через фильтр, но ЕСЛИ ЭТО - ТО ТО*/
       this.teas.forEach((tea)=>{
-        if (tea.bitterness === this.facts.bitterness)corrects++;
-        if (tea.caffeine === this.facts.caffeine)corrects++;
-        if (tea.strength === this.facts.strength)corrects++;
+        if (tea.bitterness === this.facts.bitterness || this.facts.bitterness === "notSet")corrects++;
+        if (tea.caffeine === this.facts.caffeine || this.facts.caffeine === "notSet")corrects++;
+        if (tea.strength === this.facts.strength || this.facts.strength === "notSet")corrects++;
         console.log(`${tea.name} имеет соответствие ${corrects}`)
         if (corrects===3) this.results.push(tea);
         if (corrects===2) this.similar.push(tea);
@@ -111,6 +118,14 @@ export default {
       })
       console.log("----------------------------------------")
       this.searched = true;
+    }
+  },
+  watch: {
+    facts:{
+      handler(){
+        this.runExpertSystem();
+      },
+      deep: true,
     }
   }
 };
