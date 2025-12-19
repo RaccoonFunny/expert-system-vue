@@ -1,111 +1,173 @@
 <template>
-  <div class="app">
+  <div class="container">
     <h1>Экспертная система подбора чая</h1>
 
-    <div class="controls">
+    <div class="card">
+      <h2>Ваши предпочтения</h2>
+
       <label>
         Горечь:
-        <input type="range" min="1" max="5" v-model.number="prefs.bitterness"/>
-        {{ prefs.bitterness }}
+        <select v-model="facts.bitterness">
+          <option value="low">Низкая</option>
+          <option value="medium">Средняя</option>
+          <option value="high">Высокая</option>
+        </select>
       </label>
 
       <label>
         Крепость:
-        <input type="range" min="1" max="5" v-model.number="prefs.strength"/>
-        {{ prefs.strength }}
+        <select v-model="facts.strength">
+          <option value="low">Низкая</option>
+          <option value="medium">Средняя</option>
+          <option value="high">Высокая</option>
+        </select>
       </label>
 
       <label>
         Кофеин:
-        <input type="range" min="1" max="5" v-model.number="prefs.caffeine"/>
-        {{ prefs.caffeine }}
+        <select v-model="facts.caffeine">
+          <option value="low">Низкий</option>
+          <option value="medium">Средний</option>
+          <option value="high">Высокий</option>
+        </select>
       </label>
+
+      <button @click="runExpertSystem">Подобрать чай</button>
     </div>
 
-    <button @click="recommend">Подобрать чай</button>
+    <div v-if="results.length" class="result">
+      <h2>Рекомендованные чаи:</h2>
+      <ul>
+        <li v-for="tea in results" :key="tea.name">{{ tea.name }}</li>
+      </ul>
+    </div>
 
-    <div v-if="result" class="result">
-      <h2>Результат</h2>
-      <p><strong>{{ result.name }}</strong></p>
-      <p>Горечь: {{ result.bitterness }}</p>
-      <p>Крепость: {{ result.strength }}</p>
-      <p>Кофеин: {{ result.caffeine }}</p>
+    <div v-else-if="searched" class="result">
+      <h2>Подходящие чаи не найдены.</h2>
+      <p>Однако вот список близкий к запросу</p>
+      <ul>
+        <li v-for="tea in similar" :key="tea.name">{{ tea.name }}</li>
+      </ul>
     </div>
   </div>
 </template>
 
 <script>
 export default {
-  name: "App",
-
   data() {
     return {
-      teas: [
-          //данные субъективные
-        {id: 1, name: "Зелёный чай", bitterness: 2, strength: 2, caffeine: 2},
-        {id: 2, name: "Чёрный чай", bitterness: 4, strength: 4, caffeine: 4},
-        {id: 3, name: "Улун", bitterness: 3, strength: 3, caffeine: 3},
-        {id: 4, name: "Белый чай", bitterness: 1, strength: 1, caffeine: 1},
-        {id: 5, name: "Пуэр", bitterness: 5, strength: 5, caffeine: 3}
-      ],
-      prefs: {
-        bitterness: 3,
-        strength: 3,
-        caffeine: 3,
-        tolerance: 1
+      facts: {
+        bitterness: "low",
+        strength: "low",
+        caffeine: "low"
       },
-      result: null
+      searched: false,
+      results: [],
+      similar: [],
+      //GPT опасный список (дорого было бы всё пробовать и оценивать)
+      teas: [
+        { name: "Белый чай Бай Му Дань", bitterness: "low", strength: "low", caffeine: "low" },
+        { name: "Белый чай Шоу Мэй", bitterness: "low", strength: "low", caffeine: "low" },
+        { name: "Зелёный чай Лунцзин", bitterness: "low", strength: "medium", caffeine: "medium" },
+        { name: "Зелёный чай Сенча", bitterness: "medium", strength: "medium", caffeine: "medium" },
+        { name: "Зелёный чай Матча", bitterness: "high", strength: "high", caffeine: "high" },
+        { name: "Жёлтый чай Хо Шань Хуан Я", bitterness: "low", strength: "medium", caffeine: "medium" },
+        { name: "Улун Те Гуань Инь", bitterness: "medium", strength: "medium", caffeine: "medium" },
+        { name: "Улун Да Хун Пао", bitterness: "high", strength: "high", caffeine: "medium" },
+        { name: "Молочный улун", bitterness: "low", strength: "medium", caffeine: "medium" },
+        { name: "Красный чай Дянь Хун", bitterness: "medium", strength: "high", caffeine: "high" },
+        { name: "Ассам", bitterness: "high", strength: "high", caffeine: "high" },
+        { name: "Цейлонский чёрный чай", bitterness: "medium", strength: "high", caffeine: "high" },
+        { name: "Пуэр Шу", bitterness: "high", strength: "high", caffeine: "medium" },
+        { name: "Пуэр Шэн", bitterness: "high", strength: "high", caffeine: "high" },
+        { name: "Хэй Ча", bitterness: "medium", strength: "high", caffeine: "medium" },
+        { name: "Габа улун", bitterness: "low", strength: "medium", caffeine: "low" },
+        { name: "Ходзича", bitterness: "low", strength: "low", caffeine: "low" },
+        { name: "Генмайча", bitterness: "low", strength: "medium", caffeine: "low" },
+        { name: "Лапсанг Сушонг", bitterness: "high", strength: "high", caffeine: "high" },
+        { name: "Травяной ройбуш", bitterness: "low", strength: "low", caffeine: "low" },
+        { name: "Травяной каркаде", bitterness: "medium", strength: "medium", caffeine: "low" },
+        { name: "Улун Дун Дин", bitterness: "medium", strength: "medium", caffeine: "medium" },
+        { name: "Чёрный чай Кимун", bitterness: "medium", strength: "medium", caffeine: "high" },
+        { name: "Зелёный чай Гёкуро", bitterness: "low", strength: "high", caffeine: "high" }
+      ]
     };
   },
-
   methods: {
-    recommend() {
-      const t = this.prefs.tolerance;
+    runExpertSystem() {
 
-      const matches = this.teas.filter(tea => {
-        return (
-            Math.abs(tea.bitterness - this.prefs.bitterness) <= t &&
-            Math.abs(tea.strength - this.prefs.strength) <= t &&
-            Math.abs(tea.caffeine - this.prefs.caffeine) <= t
-        );
-      });
-
-      if (matches.length === 1) {
-        this.result = matches[0];
-      } else if (matches.length > 1) {
-        this.result = matches[0];
-      }
-      // если не найдено
-      else {
-        this.result = null;
-        alert("Подходящий чай не найден");
-      }
+      let corrects=0;
+      this.results = [];
+      this.similar = [];
+      /** магия JS, позволит нам это сделать через фильтр, но ЕСЛИ ЭТО - ТО ТО*/
+      this.teas.forEach((tea)=>{
+        if (tea.bitterness === this.facts.bitterness)corrects++;
+        if (tea.caffeine === this.facts.caffeine)corrects++;
+        if (tea.strength === this.facts.strength)corrects++;
+        console.log(`${tea.name} имеет соответствие ${corrects}`)
+        if (corrects===3) this.results.push(tea);
+        if (corrects===2) this.similar.push(tea);
+        corrects=0;
+      })
+      console.log("----------------------------------------")
+      this.searched = true;
     }
   }
 };
 </script>
 
 <style>
-.app {
-  max-width: 500px;
-  margin: 40px auto;
+body {
+  background: #f4f6f8;
   font-family: Arial, sans-serif;
 }
 
-.controls label {
+.container {
+  max-width: 500px;
+  margin: 40px auto;
+}
+
+h1 {
+  text-align: center;
+}
+
+.card {
+  background: white;
+  padding: 20px;
+  border-radius: 10px;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+  margin-bottom: 20px;
+}
+
+label {
   display: block;
   margin-bottom: 15px;
 }
 
-button {
-  margin-top: 20px;
-  padding: 10px;
+select {
   width: 100%;
+  padding: 6px;
+  margin-top: 5px;
+}
+
+button {
+  width: 100%;
+  padding: 10px;
+  background: #3b82f6;
+  border: none;
+  color: white;
+  font-size: 16px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+button:hover {
+  background: #2563eb;
 }
 
 .result {
-  margin-top: 30px;
+  background: #ecfeff;
   padding: 15px;
-  border: 1px solid #ccc;
+  border-radius: 8px;
 }
 </style>
